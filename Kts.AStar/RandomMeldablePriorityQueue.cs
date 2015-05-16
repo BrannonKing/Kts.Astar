@@ -2,23 +2,38 @@
 
 namespace Kts.AStar
 {
+	public static class RandomMeldablePriorityQueueSettings
+	{
+		private static int _childrenCount = 4;
+		internal static readonly Random Rand = new Random(42);
+
+		/// <summary>
+		/// Number of children allocated for each node.
+		/// </summary>
+		public static int ChildrenCount
+		{
+			get { return _childrenCount; }
+			set
+			{
+				if (value < 2)
+					throw new ArgumentOutOfRangeException("value", value, "The value must be creater than 1.");
+				_childrenCount = value;
+			}
+		}
+	}
+
 	/// <summary>
-	///     This is a priority queue similar to a MinBinaryHeap. Instead of calling insert, you make a new heap and meld it to your current one. DecreaseKey and DeleteMin are similar.
+	/// This is a priority queue similar to a MinBinaryHeap. Instead of calling insert, you make a new heap and meld it to your current one. DecreaseKey and DeleteMin are similar.
 	/// </summary>
 	public sealed class RandomMeldablePriorityQueue<T> where T : IComparable<T>
 	{
-		// ReSharper disable StaticFieldInGenericType
-		public static int ChildrenCount = 4;
-		private static readonly Random _rand = new Random(42);
-		// ReSharper restore StaticFieldInGenericType
-
 		private readonly RandomMeldablePriorityQueue<T>[] _children;
 		private RandomMeldablePriorityQueue<T> _parent;
 
 		public RandomMeldablePriorityQueue(T firstElement)
 		{
 			Element = firstElement;
-			_children = new RandomMeldablePriorityQueue<T>[ChildrenCount];
+			_children = new RandomMeldablePriorityQueue<T>[RandomMeldablePriorityQueueSettings.ChildrenCount];
 		}
 
 		public T Element { get; private set; }
@@ -55,7 +70,7 @@ namespace Kts.AStar
 			do
 			{
 				// pick a random child branch
-				var childIdx = _rand.Next(q1._children.Length);
+				var childIdx = RandomMeldablePriorityQueueSettings.Rand.Next(q1._children.Length);
 
 				// at this point q2 is larger than or equal to q1
 				if (q1._children[childIdx] == null)
@@ -138,64 +153,5 @@ namespace Kts.AStar
 
 			return this; // we must already be the lowest value item
 		}
-
-		// Example:
-		//private static SearchNode MeldableTest(List<float> potentials, float bestScore, int width)
-		//{
-		//	var lookup = new RandomMeldablePQ<SearchNode>[potentials.Count];
-
-		//	var worstGap = width * 2 / 5;
-
-		//	SearchNode best = null;
-		//	var neighbors = new List<SearchNode>();
-		//	var opens = new RandomMeldablePQ<SearchNode>(new SearchNode(0, null, potentials.Count - 1));
-
-		//	do
-		//	{
-		//		var lowest = opens.Element;
-		//		opens = opens.DeleteMin();
-		//		lookup[lowest.Position] = null;
-		//		neighbors.Clear();
-		//		// neighbors are those P2s that are ahead of us a little way but not too far;
-		//		var prevGap = lowest.Parent == null ? width : lowest.Position - lowest.Parent.Position;
-		//		var maxOut = Math.Min(potentials.Count - 1, lowest.Position + width + worstGap); //  + width - prevGap
-		//		var minOut = lowest.Position + width - worstGap;// +width - prevGap;
-
-		//		for (int i = minOut; i <= maxOut; ++i)
-		//		{
-		//			var node = new SearchNode(i, lowest, potentials.Count - 1);
-		//			var diff = i - lowest.Position;
-		//			var gap = diff - width;
-		//			var g = diff + lowest.G + Math.Abs(gap) * 2;// (gap * gap / worstGap);
-		//			var scaledScore = (bestScore - potentials[i]) / bestScore;
-		//			g += (int)(scaledScore * scaledScore * worstGap);
-		//			node.G = g;
-		//			neighbors.Add(node);
-		//		}
-
-		//		foreach (var neighbor in neighbors)
-		//		{
-		//			var existing = lookup[neighbor.Position];
-		//			if (existing != null)
-		//			{
-		//				opens = opens.DecreaseKey(existing, neighbor);
-		//			}
-		//			else
-		//			{
-		//				existing = new RandomMeldablePQ<SearchNode>(neighbor);
-		//				opens = RandomMeldablePQ<SearchNode>.Meld(opens, existing);
-		//				lookup[neighbor.Position] = existing;
-		//			}
-		//		}
-
-		//		if (neighbors.Count <= 0)
-		//		{
-		//			best = lowest;
-		//			break;
-		//		}
-
-		//	} while (true);
-		//	return best;
-		//}
 	}
 }

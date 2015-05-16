@@ -10,29 +10,6 @@ namespace Kts.AStar.Tests
 	[TestFixture]
 	public class GridTests
 	{
-		sealed class PointDbl
-		{
-			public PointDbl(double x, double y)
-			{
-				X = x; Y = y;
-			}
-
-			public readonly double X, Y;
-
-			public override int GetHashCode()
-			{
-				return ((float)X).GetHashCode() ^ ((float)Y).GetHashCode();
-			}
-
-			public override bool Equals(object obj)
-			{
-				var other = obj as PointDbl;
-				if (other == null)
-					return false;
-				return (float)X == (float)other.X && (float)Y == (float)other.Y;
-			}
-		}
-
 		sealed class PointInt
 		{
 			public PointInt(int x, int y)
@@ -59,6 +36,48 @@ namespace Kts.AStar.Tests
 			{
 				return string.Format("X: {0}, Y: {1}", X, Y);
 			}
+		}
+
+		[Test]
+		public void ReadmeExample()
+		{
+			Func<PointInt, IEnumerable<PointInt>> getNeighbors = p => new[]
+			{
+				new PointInt(p.X - 1, p.Y + 0), // L
+				new PointInt(p.X + 1, p.Y + 0), // R
+				new PointInt(p.X + 0, p.Y - 1), // B
+				new PointInt(p.X + 0, p.Y + 1), // T
+			};
+
+			Func<PointInt, PointInt, double> getScoreBetween = (p1, p2) =>
+			{
+				// Manhatten Distance
+				return Math.Abs(p1.X - p2.X) + Math.Abs(p1.Y - p2.Y);
+			};
+
+			var rand = new Random(42);
+
+			var start = new PointInt(rand.Next(1000), rand.Next(1000));
+			var destination = new PointInt(rand.Next(1000), rand.Next(1000));
+
+			Func<PointInt, double> getHeuristicScore = p =>
+			{
+				return Math.Abs(p.X - destination.X) + Math.Abs(p.Y - destination.Y);
+			};
+
+			Console.WriteLine("Going from {0} to {1}", start, destination);
+
+			var sw = Stopwatch.StartNew();
+			double distance;
+			var results = AStarUtilities.FindMinimalPath(start, destination, getNeighbors, getScoreBetween, getHeuristicScore, out distance);
+
+			Console.WriteLine("Done in {0}s.", sw.Elapsed.TotalSeconds);
+			Console.WriteLine("Expansions: {0}", AStarUtilities.LastExpansionCount);
+			Console.WriteLine("Result Count: {0}", results.Count);
+			Console.WriteLine("Distance: {0}", distance);
+
+			Assert.AreEqual(start, results.First());
+			Assert.AreEqual(destination, results.Last());
 		}
 
 		[Test]
@@ -126,32 +145,36 @@ namespace Kts.AStar.Tests
 			};
 
 			var rand = new Random(42);
-
-			for (int i = 0; i < 1; i++)
+			for (int j = 0; j < 3; j++)
 			{
 				var start = new PointInt(rand.Next(1000), rand.Next(1000));
 				var destination = new PointInt(rand.Next(1000), rand.Next(1000));
-
-				Func<PointInt, double> getHeuristicScore = p =>
+				for (int i = 0; i < 4; i++)
 				{
-					var dx = p.X - destination.X;
-					var dy = p.Y - destination.Y;
-					return Math.Sqrt(dx * dx + dy * dy);
-				};
+					RandomMeldablePriorityQueueSettings.ChildrenCount = i + 2;
+					Console.WriteLine("Starting run with {0} children.", i + 2);
 
-				Console.WriteLine("Going from {0} to {1}", start, destination);
+					Func<PointInt, double> getHeuristicScore = p =>
+					{
+						var dx = p.X - destination.X;
+						var dy = p.Y - destination.Y;
+						return Math.Sqrt(dx * dx + dy * dy);
+					};
 
-				var sw = Stopwatch.StartNew();
-				double distance;
-				var results = AStarUtilities.FindMinimalPath(start, destination, getNeighbors, getScoreBetween, getHeuristicScore, out distance);
+					Console.WriteLine("Going from {0} to {1}", start, destination);
 
-				Console.WriteLine("Done in {0}s.", sw.Elapsed.TotalSeconds);
-				Console.WriteLine("Expansions: {0}", AStarUtilities.LastExpansionCount);
-				Console.WriteLine("Result Count: {0}", results.Count);
-				Console.WriteLine("Distance: {0}", distance);
+					var sw = Stopwatch.StartNew();
+					double distance;
+					var results = AStarUtilities.FindMinimalPath(start, destination, getNeighbors, getScoreBetween, getHeuristicScore, out distance);
 
-				Assert.AreEqual(start, results.First());
-				Assert.AreEqual(destination, results.Last());
+					Console.WriteLine("Done in {0}s.", sw.Elapsed.TotalSeconds);
+					Console.WriteLine("Expansions: {0}", AStarUtilities.LastExpansionCount);
+					Console.WriteLine("Result Count: {0}", results.Count);
+					Console.WriteLine("Distance: {0}", distance);
+
+					Assert.AreEqual(start, results.First());
+					Assert.AreEqual(destination, results.Last());
+				}
 			}
 		}
 
