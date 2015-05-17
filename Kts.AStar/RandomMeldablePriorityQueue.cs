@@ -2,26 +2,6 @@
 
 namespace Kts.AStar
 {
-	public static class RandomMeldablePriorityQueueSettings
-	{
-		private static int _childrenCount = 4;
-		internal static readonly Random Rand = new Random(42);
-
-		/// <summary>
-		/// Number of children allocated for each node.
-		/// </summary>
-		public static int ChildrenCount
-		{
-			get { return _childrenCount; }
-			set
-			{
-				if (value < 2)
-					throw new ArgumentOutOfRangeException("value", value, "The value must be creater than 1.");
-				_childrenCount = value;
-			}
-		}
-	}
-
 	/// <summary>
 	/// This is a priority queue similar to a MinBinaryHeap. Instead of calling insert, you make a new heap and meld it to your current one. DecreaseKey and DeleteMin are similar.
 	/// </summary>
@@ -70,7 +50,7 @@ namespace Kts.AStar
 			do
 			{
 				// pick a random child branch
-				var childIdx = RandomMeldablePriorityQueueSettings.Rand.Next(q1._children.Length);
+				var childIdx = RandomMeldablePriorityQueueSettings.NextRandom(q1._children.Length);
 
 				// at this point q2 is larger than or equal to q1
 				if (q1._children[childIdx] == null)

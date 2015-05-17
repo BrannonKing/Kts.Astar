@@ -39,11 +39,11 @@ To use the library you will need some object representing a location in your sea
 ```
 
 To use the engine you need to specify several things:
-1. A starting point/vertex.
-2. An ending point/vertex.
-3. A method to return the neighbors of a vertex.
-4. A method to return the score/distance between two vertices.
-5. A method to return a projected score between a vertex and the ending vertex.
+ 1. A starting point/vertex.
+ 2. An ending point/vertex.
+ 3. A method to return the neighbors of a vertex.
+ 4. A method to return the score/distance between two vertices.
+ 5. A method to return a projected score between a vertex and the ending vertex.
 
 Example:
 
@@ -77,7 +77,7 @@ Example:
 		}
 
 		[Test]
-		public void ReadmeExample()
+		public void FindShortestPath()
 		{
 			Func<PointInt, IEnumerable<PointInt>> getNeighbors = p => new[]
 			{
@@ -107,7 +107,8 @@ Example:
 
 			var sw = Stopwatch.StartNew();
 			double distance;
-			var results = AStarUtilities.FindMinimalPath(start, destination, getNeighbors, getScoreBetween, getHeuristicScore, out distance);
+			var results = AStarUtilities.FindMinimalPath(start, destination, getNeighbors, 
+				getScoreBetween, getHeuristicScore, out distance);
 
 			Console.WriteLine("Done in {0}s.", sw.Elapsed.TotalSeconds);
 			Console.WriteLine("Expansions: {0}", AStarUtilities.LastExpansionCount);
