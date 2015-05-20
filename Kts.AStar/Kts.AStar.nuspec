@@ -1,0 +1,22 @@
+﻿<?xml version="1.0"?>
+<package>
+	<metadata>
+		<id>$id$</id>
+		<version>$version$</version>
+		<title>$title$</title>
+		<authors>Brannon King</authors>
+		<owners>$author$</owners>
+		<projectUrl>https://github.com/BrannonKing/Kts.AStar</projectUrl>
+		<licenseUrl>https://raw.githubusercontent.com/BrannonKing/Kts.Astar/master/LICENSE</licenseUrl>
+		<requireLicenseAcceptance>false</requireLicenseAcceptance>
+		<description>This is a small library that implements a meldable priority queue and a generalizable A* search algorithm on top of that. The performance is good.</description>
+		<summary>A* and Priority Queue</summary>
+		<releaseNotes>Initial release.</releaseNotes>
+		<copyright>Copyright © 2015 Kingtown Software</copyright>
+		<language>en-US</language>
+		<tags>A* AStar meldable priority queue QuickGraph</tags>
+	</metadata>
+	<files>
+		<file src="bin\Release\*" target="lib"/>
+	</files>
+</package>

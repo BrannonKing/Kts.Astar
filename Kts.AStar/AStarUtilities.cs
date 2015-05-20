@@ -2,6 +2,8 @@
 using System.Collections.Generic;
 using System.Linq;
 
+// to publish: nuget pack Kts.AStar\Kts.AStar.csproj -Prop Configuration=Release
+
 namespace Kts.AStar
 {
 	public static class AStarUtilities
