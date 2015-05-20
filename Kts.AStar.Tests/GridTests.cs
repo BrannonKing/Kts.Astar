@@ -1,15 +1,22 @@
-﻿using NUnit.Framework;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using QuickGraph;
+using Xunit;
+using Xunit.Abstractions;
 
 namespace Kts.AStar.Tests
 {
-	[TestFixture]
 	public class GridTests
 	{
+		private readonly ITestOutputHelper _output;
+
+		public GridTests(ITestOutputHelper output)
+		{
+			_output = output;
+		}
+
 		sealed class PointInt
 		{
 			public PointInt(int x, int y)
@@ -38,7 +45,7 @@ namespace Kts.AStar.Tests
 			}
 		}
 
-		[Test]
+		[Fact]
 		public void ReadmeExample()
 		{
 			Func<PointInt, IEnumerable<PointInt>> getNeighbors = p => new[]
@@ -65,22 +72,22 @@ namespace Kts.AStar.Tests
 				return Math.Abs(p.X - destination.X) + Math.Abs(p.Y - destination.Y);
 			};
 
-			Console.WriteLine("Going from {0} to {1}", start, destination);
+			_output.WriteLine("Going from {0} to {1}", start, destination);
 
 			var sw = Stopwatch.StartNew();
 			double distance;
 			var results = AStarUtilities.FindMinimalPath(start, destination, getNeighbors, getScoreBetween, getHeuristicScore, out distance);
 
-			Console.WriteLine("Done in {0}s.", sw.Elapsed.TotalSeconds);
-			Console.WriteLine("Expansions: {0}", AStarUtilities.LastExpansionCount);
-			Console.WriteLine("Result Count: {0}", results.Count);
-			Console.WriteLine("Distance: {0}", distance);
+			_output.WriteLine("Done in {0}s.", sw.Elapsed.TotalSeconds);
+			_output.WriteLine("Expansions: {0}", AStarUtilities.LastExpansionCount);
+			_output.WriteLine("Result Count: {0}", results.Count);
+			_output.WriteLine("Distance: {0}", distance);
 
-			Assert.AreEqual(start, results.First());
-			Assert.AreEqual(destination, results.Last());
+			Assert.Equal(start, results.First());
+			Assert.Equal(destination, results.Last());
 		}
 
-		[Test]
+		[Fact]
 		public void RunSmallGrid()
 		{
 			// |_|_|X|_|_|
@@ -115,14 +122,14 @@ namespace Kts.AStar.Tests
 			double distance;
 			var results = AStarUtilities.FindMinimalPath(start, destination, getNeighbors, getScoreBetween, getHeuristicScore, out distance);
 
-			Assert.AreEqual(start, results[0]);
-			Assert.AreEqual(new PointInt(1, 1), results[2]);
-			Assert.AreEqual(new PointInt(2, 0), results[4]);
-			Assert.AreEqual(new PointInt(3, 1), results[6]);
-			Assert.AreEqual(destination, results[8]);
+			Assert.Equal(start, results[0]);
+			Assert.Equal(new PointInt(1, 1), results[2]);
+			Assert.Equal(new PointInt(2, 0), results[4]);
+			Assert.Equal(new PointInt(3, 1), results[6]);
+			Assert.Equal(destination, results[8]);
 		}
 
-		[Test]
+		[Fact]
 		public void SpeedTest()
 		{
 			Func<PointInt, IEnumerable<PointInt>> getNeighbors = p => new[]
@@ -152,7 +159,7 @@ namespace Kts.AStar.Tests
 				for (int i = 0; i < 4; i++)
 				{
 					RandomMeldablePriorityQueueSettings.ChildrenCount = i + 2;
-					Console.WriteLine("Starting run with {0} children.", i + 2);
+					_output.WriteLine("Starting run with {0} children.", i + 2);
 
 					Func<PointInt, double> getHeuristicScore = p =>
 					{
@@ -161,24 +168,24 @@ namespace Kts.AStar.Tests
 						return Math.Sqrt(dx * dx + dy * dy);
 					};
 
-					Console.WriteLine("Going from {0} to {1}", start, destination);
+					_output.WriteLine("Going from {0} to {1}", start, destination);
 
 					var sw = Stopwatch.StartNew();
 					double distance;
 					var results = AStarUtilities.FindMinimalPath(start, destination, getNeighbors, getScoreBetween, getHeuristicScore, out distance);
 
-					Console.WriteLine("Done in {0}s.", sw.Elapsed.TotalSeconds);
-					Console.WriteLine("Expansions: {0}", AStarUtilities.LastExpansionCount);
-					Console.WriteLine("Result Count: {0}", results.Count);
-					Console.WriteLine("Distance: {0}", distance);
+					_output.WriteLine("Done in {0}s.", sw.Elapsed.TotalSeconds);
+					_output.WriteLine("Expansions: {0}", AStarUtilities.LastExpansionCount);
+					_output.WriteLine("Result Count: {0}", results.Count);
+					_output.WriteLine("Distance: {0}", distance);
 
-					Assert.AreEqual(start, results.First());
-					Assert.AreEqual(destination, results.Last());
+					Assert.Equal(start, results.First());
+					Assert.Equal(destination, results.Last());
 				}
 			}
 		}
 
-		[Test]
+		[Fact]
 		public void QuickgraphComparision()
 		{
 			Func<Edge<PointInt>, double> getScoreBetween = edge =>
@@ -215,12 +222,12 @@ namespace Kts.AStar.Tests
 				};
 
 				var sw = Stopwatch.StartNew();
-				
+
 				algorithm.Compute(start);
-	
-				Console.WriteLine("Done in {0}s.", sw.Elapsed.TotalSeconds);
-				Console.WriteLine("Expansions: {0}", expansions);
-				Console.WriteLine("Distance: {0}", algorithm.Distances[destination]);
+
+				_output.WriteLine("Done in {0}s.", sw.Elapsed.TotalSeconds);
+				_output.WriteLine("Expansions: {0}", expansions);
+				_output.WriteLine("Distance: {0}", algorithm.Distances[destination]);
 			}
 		}
 
@@ -288,7 +295,7 @@ namespace Kts.AStar.Tests
 				throw new NotImplementedException();
 			}
 
-			private List<PointInt> _vertices; 
+			private List<PointInt> _vertices;
 
 			public bool IsVerticesEmpty { get { return false; } }
 			public int VertexCount { get { return 1000000; } }
