@@ -8,11 +8,14 @@ namespace Kts.AStar
 
 		public static void Reseed(int seed)
 		{
-			_rand = new Random(seed);
+			_rand = new Random(seed); 
 		}
 		private static Random _rand = new Random(42);
 		public static int NextRandom(int cap)
 		{
+			// todo: change this to use crypto
+			// bring back 2KB of data
+			// if cap < 256 just advance one byte
 			return _rand.Next(cap);
 		}
 
