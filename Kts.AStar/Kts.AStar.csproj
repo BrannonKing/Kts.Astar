@@ -34,8 +34,9 @@
   <ItemGroup>
     <Compile Include="AStarUtilities.cs" />
     <Compile Include="RandomMeldablePriorityQueue.cs" />
+    <Compile Include="RandomMeldablePriorityTree.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="RandomMeldablePriorityQueueSettings.cs" />
+    <Compile Include="RandomMeldablePriorityTreeSettings.cs" />
     <Compile Include="SearchNodeBase.cs" />
   </ItemGroup>
   <ItemGroup>

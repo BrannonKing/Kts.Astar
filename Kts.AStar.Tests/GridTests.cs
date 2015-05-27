@@ -122,10 +122,9 @@ namespace Kts.AStar.Tests
 			double distance;
 			var results = AStarUtilities.FindMinimalPath(start, destination, getNeighbors, getScoreBetween, getHeuristicScore, out distance);
 
+			Assert.Equal(9, results.Count);
 			Assert.Equal(start, results[0]);
-			Assert.Equal(new PointInt(1, 1), results[2]);
 			Assert.Equal(new PointInt(2, 0), results[4]);
-			Assert.Equal(new PointInt(3, 1), results[6]);
 			Assert.Equal(destination, results[8]);
 		}
 
@@ -158,7 +157,7 @@ namespace Kts.AStar.Tests
 				var destination = new PointInt(rand.Next(1000), rand.Next(1000));
 				for (int i = 0; i < 4; i++)
 				{
-					RandomMeldablePriorityQueueSettings.ChildrenCount = i + 2;
+					RandomMeldablePriorityTreeSettings.ChildrenCount = i + 2;
 					_output.WriteLine("Starting run with {0} children.", i + 2);
 
 					Func<PointInt, double> getHeuristicScore = p =>
@@ -184,6 +183,59 @@ namespace Kts.AStar.Tests
 				}
 			}
 		}
+
+		[Fact]
+		public void VerifyDual()
+		{
+			Func<PointInt, IEnumerable<PointInt>> getNeighbors = p => new[]
+			{
+				new PointInt(p.X - 1, p.Y + 0), // L
+				new PointInt(p.X + 1, p.Y + 0), // R
+				new PointInt(p.X + 0, p.Y - 1), // B
+				new PointInt(p.X + 0, p.Y + 1), // T
+			};
+
+			Func<PointInt, PointInt, double> getScoreBetween = (p1, p2) =>
+			{
+				// Manhatten Distance
+				return Math.Abs(p1.X - p2.X) + Math.Abs(p1.Y - p2.Y);
+			};
+
+			var rand = new Random(42);
+
+			var start = new PointInt(rand.Next(1000), rand.Next(1000));
+			var destination = new PointInt(rand.Next(1000), rand.Next(1000));
+
+			Func<PointInt, bool, double> getHeuristicScore = (p, backward) =>
+			{
+				if (backward)
+					return Math.Abs(p.X - start.X) + Math.Abs(p.Y - start.Y);
+				return Math.Abs(p.X - destination.X) + Math.Abs(p.Y - destination.Y);
+			};
+
+			_output.WriteLine("Going from {0} to {1}", start, destination);
+
+			var sw = Stopwatch.StartNew();
+			double distance;
+			var results = AStarUtilities.BidirectionalFindMinimalPath(start, destination, getNeighbors, getScoreBetween, getHeuristicScore, out distance);
+
+			_output.WriteLine("Done in {0}s.", sw.Elapsed.TotalSeconds);
+			_output.WriteLine("Expansions: {0}", AStarUtilities.LastExpansionCount);
+			_output.WriteLine("Result Count: {0}", results.Count);
+			_output.WriteLine("Distance: {0}", distance);
+
+			Assert.Equal(start, results.First());
+			Assert.Equal(destination, results.Last());
+		}
+
+		// MAIN TODO:
+		// need to change queue to work like a LIFO for equally scored nodes; start with a unit test on this
+		// need to fix dual to actually work and rename it bidirectional
+		// need to add support for empty open list (aka, no solution)
+		// need to add support for tasks and cancelation token
+		// and also write a graph search that has negative sides
+
+		#region QuickGraph
 
 		[Fact]
 		public void QuickgraphComparision()
@@ -319,5 +371,7 @@ namespace Kts.AStar.Tests
 				}
 			}
 		}
+
+		#endregion
 	}
 }

@@ -2,7 +2,7 @@ using System;
 
 namespace Kts.AStar
 {
-	public static class RandomMeldablePriorityQueueSettings
+	public static class RandomMeldablePriorityTreeSettings
 	{
 		private static int _childrenCount = 4;
 

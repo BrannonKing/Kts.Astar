@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Kts.AStar
@@ -45,7 +46,8 @@ namespace Kts.AStar
 		{
 			var other = obj as SearchNodeBase<T>;
 			if (other == null) return false;
-			return Equals(Position, other.Position);
+			var comparer = EqualityComparer<T>.Default;
+			return comparer.Equals(Position, other.Position);
 		}
 
 		public override string ToString()
@@ -55,7 +57,14 @@ namespace Kts.AStar
 
 		public int CompareTo(SearchNodeBase<T> other)
 		{
-			return F.CompareTo(other.F);
+			var ret = F.CompareTo(other.F);
+			if (ret != 0)
+				return ret;
+
+			// wikipedia says that you should return itens in LIFO fashion for improved A* performance.
+			// we could increment some node creation seed, but after some thought, 
+			// I think falling back to an inverse G comparision should be almost equivalent; favor the larger G
+			return other.G.CompareTo(G);
 		}
 	}
 }
