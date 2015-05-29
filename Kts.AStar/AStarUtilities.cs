@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections.Concurrent;
 using System.Linq;
 using System.Threading.Tasks;
 
@@ -112,7 +113,7 @@ namespace Kts.AStar
 					throw new InvalidOperationException("Expected opens to always point to the root.");
 				}
 #endif
-				lookup[lowest.Position] = null;
+				lookup[lowest.Position] = null; // keep this below the isDone check
 
 				foreach (var neighbor in getNeighbors.Invoke(lowest))
 				{
@@ -156,25 +157,18 @@ namespace Kts.AStar
 		/// Returns the best path. It runs two searches on separate threads. One search starts from each end.
 		/// TPosition will be used as a dictionary key.
 		/// </summary>
-		internal static List<TPosition> BidirectionalFindMinimalPath<TPosition>(TPosition startingPosition, TPosition endingPosition, Func<TPosition, IEnumerable<TPosition>> getNeighbors,
+		public static List<TPosition> BidirectionalFindMinimalPath<TPosition>(TPosition startingPosition, TPosition endingPosition, Func<TPosition, IEnumerable<TPosition>> getNeighbors,
 			Func<TPosition, TPosition, double> getScoreBetween, Func<TPosition, bool, double> getHeuristicScore, out double distance)
 			where TPosition : class // needed for thread-safe assignment
 		{
-			EncapsulatedSearchNode<TPosition> best1 = null, best2 = null, allDone = null;
-			RandomMeldablePriorityTree<EncapsulatedSearchNode<TPosition>> best1Node = null, best2Node = null;
+			var dictionary = new ConcurrentDictionary<TPosition, EncapsulatedSearchNode<TPosition>>();
+			Dictionary<TPosition, RandomMeldablePriorityTree<EncapsulatedSearchNode<TPosition>>> lookup1 = null, lookup2 = null;
 			Func<Dictionary<TPosition, RandomMeldablePriorityTree<EncapsulatedSearchNode<TPosition>>>, EncapsulatedSearchNode<TPosition>, bool> thread1Done =
 				(lookup, best) =>
 				{
-					if (allDone != null)
+					if (!dictionary.TryAdd(best.Position, best))
 					{
-						best1Node = null;
-						return true;
-					}
-					best1 = best;
-					var otherBest = best2;
-					if (otherBest != null && lookup.TryGetValue(otherBest.Position, out best1Node) && best1Node != null)
-					{
-						allDone = otherBest;
+						lookup1 = lookup;
 						return true;
 					}
 					return false;
@@ -182,16 +176,9 @@ namespace Kts.AStar
 			Func<Dictionary<TPosition, RandomMeldablePriorityTree<EncapsulatedSearchNode<TPosition>>>, EncapsulatedSearchNode<TPosition>, bool> thread2Done =
 				(lookup, best) =>
 				{
-					if (allDone != null)
+					if (!dictionary.TryAdd(best.Position, best))
 					{
-						best2Node = null;
-						return true;
-					}
-					best2 = best;
-					var otherBest = best1;
-					if (otherBest != null && lookup.TryGetValue(otherBest.Position, out best2Node) && best2Node != null)
-					{
-						allDone = otherBest;
+						lookup2 = lookup;
 						return true;
 					}
 					return false;
@@ -209,38 +196,58 @@ namespace Kts.AStar
 			var path1 = task1.Result;
 			var path2 = task2.Result;
 
-			// the one that finished first has the right path returned
-			// add that to the node still set for that path
-			// if bestNode1 != null then task 1 finished first
+			LastExpansionCount = lookup1.Count + lookup2.Count;
+
+			var overlap = lookup1.Keys.Intersect(lookup2.Keys);
+			var kvps = overlap.ToDictionary(o => o, o => GetG(lookup1, dictionary, o) + GetG(lookup2, dictionary, o));
 
 			var ret = new List<TPosition>();
 
-			if (best1Node != null)
+			var first = kvps.OrderBy(kvp => kvp.Value).Select(kvp => kvp.Key).FirstOrDefault();
+			if (first == null)
 			{
-				ret.AddRange(path1.Select(p => p.Position));
-				var element = allDone;
-				distance = element.G + path1.Last().G;
-				while (element != null)
-				{
-					ret.Add(element.Position);
-					element = element.Parent as EncapsulatedSearchNode<TPosition>;
-				}
-				// these should already be in the right order since it was searching backward
+				distance = double.PositiveInfinity;
+				return ret;
 			}
-			else
+
+			SearchNodeBase<TPosition> node1 = GetNode(lookup1, dictionary, first);
+			SearchNodeBase<TPosition> node2 = GetNode(lookup2, dictionary, first);
+
+
+			distance = node1.G + node2.G;
+			while (node1 != null)
 			{
-				var element = allDone;
-				distance = element.G + path2.First().G;
-				while (element != null)
-				{
-					ret.Add(element.Position);
-					element = element.Parent as EncapsulatedSearchNode<TPosition>;
-				}
-				ret.Reverse();
-				ret.AddRange(path2.Select(p => p.Position));
+				ret.Add(node1.Position);
+				node1 = node1.Parent;
+			}
+			ret.Reverse();
+			ret.RemoveAt(ret.Count - 1); // don't double-add the overlap
+			while (node2 != null)
+			{
+				ret.Add(node2.Position);
+				node2 = node2.Parent;
 			}
 
 			return ret;
+		}
+
+		private static double GetG<TPosition>(Dictionary<TPosition, RandomMeldablePriorityTree<EncapsulatedSearchNode<TPosition>>> lookup, ConcurrentDictionary<TPosition, EncapsulatedSearchNode<TPosition>> dictionary, TPosition key)
+		{
+			RandomMeldablePriorityTree<EncapsulatedSearchNode<TPosition>> tree;
+			if (lookup.TryGetValue(key, out tree) && tree != null)
+				return tree.Element.G;
+			EncapsulatedSearchNode<TPosition> node;
+			if (dictionary.TryGetValue(key, out node))
+				return node.G;
+			return double.PositiveInfinity;
+		}
+
+		private static EncapsulatedSearchNode<TPosition> GetNode<TPosition>(Dictionary<TPosition, RandomMeldablePriorityTree<EncapsulatedSearchNode<TPosition>>> lookup, ConcurrentDictionary<TPosition, EncapsulatedSearchNode<TPosition>> dictionary, TPosition key)
+		{
+			RandomMeldablePriorityTree<EncapsulatedSearchNode<TPosition>> tree;
+			if (lookup.TryGetValue(key, out tree) && tree != null)
+				return tree.Element;
+			return dictionary[key];
 		}
 	}
 }

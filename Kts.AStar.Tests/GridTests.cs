@@ -185,7 +185,7 @@ namespace Kts.AStar.Tests
 		}
 
 		[Fact]
-		public void VerifyDual()
+		public void VerifyBidirectional()
 		{
 			Func<PointInt, IEnumerable<PointInt>> getNeighbors = p => new[]
 			{
@@ -203,20 +203,20 @@ namespace Kts.AStar.Tests
 
 			var rand = new Random(42);
 
-			var start = new PointInt(rand.Next(1000), rand.Next(1000));
-			var destination = new PointInt(rand.Next(1000), rand.Next(1000));
+			var start = new PointInt(0,0);
+			var destination = new PointInt(400, 400);
 
 			Func<PointInt, bool, double> getHeuristicScore = (p, backward) =>
 			{
-				if (backward)
-					return Math.Abs(p.X - start.X) + Math.Abs(p.Y - start.Y);
-				return Math.Abs(p.X - destination.X) + Math.Abs(p.Y - destination.Y);
+				var dx = backward ? (p.X - start.X) : (p.X - destination.X);
+				var dy = backward ? (p.Y - start.Y) : (p.Y - destination.Y);
+				return Math.Sqrt(dx * dx + dy * dy);
 			};
 
 			_output.WriteLine("Going from {0} to {1}", start, destination);
 
 			var sw = Stopwatch.StartNew();
-			double distance;
+			double distance, distanceControl;
 			var results = AStarUtilities.BidirectionalFindMinimalPath(start, destination, getNeighbors, getScoreBetween, getHeuristicScore, out distance);
 
 			_output.WriteLine("Done in {0}s.", sw.Elapsed.TotalSeconds);
@@ -226,6 +226,18 @@ namespace Kts.AStar.Tests
 
 			Assert.Equal(start, results.First());
 			Assert.Equal(destination, results.Last());
+
+			sw.Restart();
+			var resultsControl = AStarUtilities.FindMinimalPath(start, destination, getNeighbors, getScoreBetween, p => getHeuristicScore(p, false), out distanceControl);
+
+			_output.WriteLine("Control Done in {0}s.", sw.Elapsed.TotalSeconds);
+			_output.WriteLine("Expansions: {0}", AStarUtilities.LastExpansionCount);
+			_output.WriteLine("Result Count: {0}", resultsControl.Count);
+			_output.WriteLine("Distance: {0}", distanceControl);
+
+			Assert.Equal(start, resultsControl.First());
+			Assert.Equal(destination, resultsControl.Last());
+			Assert.Equal(distanceControl, distance);
 		}
 
 		// MAIN TODO:
