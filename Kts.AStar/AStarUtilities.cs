@@ -44,14 +44,17 @@ namespace Kts.AStar
 		public static List<TPosition> FindMinimalPath<TPosition>(
 			TPosition startingPosition, 
 			TPosition endingPosition, 
-			Func<TPosition, 
-			IEnumerable<TPosition>> getNeighbors,
+			Func<TPosition, IEnumerable<TPosition>> getNeighbors,
 			Func<TPosition, TPosition, double> getScoreBetween, 
 			Func<TPosition, double> getHeuristicScore, 
-			out double distance)
+			out double distance, out bool success)
 		{
-			var list = FindMinimalPath(new EncapsulatedSearchNode<TPosition>(startingPosition, null, (p1, p2) => 0.0, getHeuristicScore),
-				endingPosition, node => getNeighbors.Invoke(node.Position).Select(neighbor => new EncapsulatedSearchNode<TPosition>(neighbor, node, getScoreBetween, getHeuristicScore)));
+			var list = FindMinimalPath(
+				new EncapsulatedSearchNode<TPosition>(startingPosition, null, (p1, p2) => 0.0, getHeuristicScore),
+				endingPosition, 
+				node => getNeighbors.Invoke(node.Position).Select(neighbor => new EncapsulatedSearchNode<TPosition>(neighbor, node, getScoreBetween, getHeuristicScore)),
+				out success
+				);
 
 			distance = list.Last().G;
 			var ret = new List<TPosition>(list.Count);
@@ -67,11 +70,14 @@ namespace Kts.AStar
 		public static List<TNode> FindMinimalPath<TNode, TPosition>(
 			TNode startingNode, 
 			TPosition endPosition, 
-			Func<TNode, IEnumerable<TNode>> getNeighbors)
+			Func<TNode, IEnumerable<TNode>> getNeighbors,
+			out bool success)
 			where TNode : SearchNodeBase<TPosition>
 		{
 			var comparer = EqualityComparer<TPosition>.Default;
-			return FindMinimalPath<TNode, TPosition>(startingNode, (lookup, best) => comparer.Equals(best.Position, endPosition), getNeighbors);
+			var ret = FindMinimalPath<TNode, TPosition>(startingNode, (lookup, best) => comparer.Equals(best.Position, endPosition), getNeighbors);
+			success = ret.Count > 0 && comparer.Equals(ret.Last().Position, endPosition);
+			return ret;
 		}
 
 		/// <summary>

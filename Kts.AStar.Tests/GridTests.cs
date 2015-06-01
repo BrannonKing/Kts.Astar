@@ -75,14 +75,15 @@ namespace Kts.AStar.Tests
 			_output.WriteLine("Going from {0} to {1}", start, destination);
 
 			var sw = Stopwatch.StartNew();
-			double distance;
-			var results = AStarUtilities.FindMinimalPath(start, destination, getNeighbors, getScoreBetween, getHeuristicScore, out distance);
+			double distance; bool success;
+			var results = AStarUtilities.FindMinimalPath(start, destination, getNeighbors, getScoreBetween, getHeuristicScore, out distance, out success);
 
 			_output.WriteLine("Done in {0}s.", sw.Elapsed.TotalSeconds);
 			_output.WriteLine("Expansions: {0}", AStarUtilities.LastExpansionCount);
 			_output.WriteLine("Result Count: {0}", results.Count);
 			_output.WriteLine("Distance: {0}", distance);
 
+			Assert.True(success);
 			Assert.Equal(start, results.First());
 			Assert.Equal(destination, results.Last());
 		}
@@ -119,9 +120,10 @@ namespace Kts.AStar.Tests
 				return Math.Sqrt(dx * dx + dy * dy);
 			};
 
-			double distance;
-			var results = AStarUtilities.FindMinimalPath(start, destination, getNeighbors, getScoreBetween, getHeuristicScore, out distance);
+			double distance; bool success;
+			var results = AStarUtilities.FindMinimalPath(start, destination, getNeighbors, getScoreBetween, getHeuristicScore, out distance, out success);
 
+			Assert.True(success);
 			Assert.Equal(9, results.Count);
 			Assert.Equal(start, results[0]);
 			Assert.Equal(new PointInt(2, 0), results[4]);
@@ -170,14 +172,15 @@ namespace Kts.AStar.Tests
 					_output.WriteLine("Going from {0} to {1}", start, destination);
 
 					var sw = Stopwatch.StartNew();
-					double distance;
-					var results = AStarUtilities.FindMinimalPath(start, destination, getNeighbors, getScoreBetween, getHeuristicScore, out distance);
+					double distance; bool success;
+					var results = AStarUtilities.FindMinimalPath(start, destination, getNeighbors, getScoreBetween, getHeuristicScore, out distance, out success);
 
 					_output.WriteLine("Done in {0}s.", sw.Elapsed.TotalSeconds);
 					_output.WriteLine("Expansions: {0}", AStarUtilities.LastExpansionCount);
 					_output.WriteLine("Result Count: {0}", results.Count);
 					_output.WriteLine("Distance: {0}", distance);
 
+					Assert.True(success);
 					Assert.Equal(start, results.First());
 					Assert.Equal(destination, results.Last());
 				}
@@ -228,13 +231,15 @@ namespace Kts.AStar.Tests
 			Assert.Equal(destination, results.Last());
 
 			sw.Restart();
-			var resultsControl = AStarUtilities.FindMinimalPath(start, destination, getNeighbors, getScoreBetween, p => getHeuristicScore(p, false), out distanceControl);
+			bool success;
+			var resultsControl = AStarUtilities.FindMinimalPath(start, destination, getNeighbors, getScoreBetween, p => getHeuristicScore(p, false), out distanceControl, out success);
 
 			_output.WriteLine("Control Done in {0}s.", sw.Elapsed.TotalSeconds);
 			_output.WriteLine("Expansions: {0}", AStarUtilities.LastExpansionCount);
 			_output.WriteLine("Result Count: {0}", resultsControl.Count);
 			_output.WriteLine("Distance: {0}", distanceControl);
 
+			Assert.True(success);
 			Assert.Equal(start, resultsControl.First());
 			Assert.Equal(destination, resultsControl.Last());
 			Assert.Equal(distanceControl, distance);
