@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Collections.Concurrent;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 
 // to publish: nuget pack Kts.AStar\Kts.AStar.csproj -Prop Configuration=Release
@@ -16,11 +17,11 @@ namespace Kts.AStar
 		{
 			private readonly double _h;
 			public EncapsulatedSearchNode(
-				T position, 
-				SearchNodeBase<T> parent, 
-				Func<T, T, double> getScoreBetween, 
+				T position,
+				SearchNodeBase<T> parent,
+				Func<T, T, double> getScoreBetween,
 				Func<T, double> getHeuristicScore)
-				: base(position, parent, 
+				: base(position, parent,
 					parent == null ? 0.0 : getScoreBetween.Invoke(parent.Position, position))
 			{
 				_h = getHeuristicScore.Invoke(position);
@@ -42,22 +43,31 @@ namespace Kts.AStar
 		/// <param name="getScoreBetween">Given two (adjacent) positions/nodes, return the score/distance between them.</param>
 		/// <param name="getHeuristicScore">Given a position/node, return the (admissibly) estimated distance/score for that point to the endingPosition.</param>
 		public static List<TPosition> FindMinimalPath<TPosition>(
-			TPosition startingPosition, 
-			TPosition endingPosition, 
+			TPosition startingPosition,
+			TPosition endingPosition,
 			Func<TPosition, IEnumerable<TPosition>> getNeighbors,
-			Func<TPosition, TPosition, double> getScoreBetween, 
-			Func<TPosition, double> getHeuristicScore, 
-			out double distance, out bool success)
+			Func<TPosition, TPosition, double> getScoreBetween,
+			Func<TPosition, double> getHeuristicScore,
+			out double distance,
+			out bool success,
+			CancellationToken token = new CancellationToken())
 		{
 			var list = FindMinimalPath(
 				new EncapsulatedSearchNode<TPosition>(startingPosition, null, (p1, p2) => 0.0, getHeuristicScore),
-				endingPosition, 
+				endingPosition,
 				node => getNeighbors.Invoke(node.Position).Select(neighbor => new EncapsulatedSearchNode<TPosition>(neighbor, node, getScoreBetween, getHeuristicScore)),
-				out success
+				out success,
+				token
 				);
 
-			distance = list.Last().G;
 			var ret = new List<TPosition>(list.Count);
+			if (list.Count <= 0)
+			{
+				distance = double.PositiveInfinity;
+				return ret;
+			}
+
+			distance = list.Last().G;
 			foreach (var node in list)
 				ret.Add(node.Position);
 			return ret;
@@ -68,14 +78,26 @@ namespace Kts.AStar
 		/// TPosition will be used as a dictionary key.
 		/// </summary>
 		public static List<TNode> FindMinimalPath<TNode, TPosition>(
-			TNode startingNode, 
-			TPosition endPosition, 
+			TNode startingNode,
+			TPosition endPosition,
 			Func<TNode, IEnumerable<TNode>> getNeighbors,
-			out bool success)
+			out bool success,
+			CancellationToken token = new CancellationToken())
 			where TNode : SearchNodeBase<TPosition>
 		{
 			var comparer = EqualityComparer<TPosition>.Default;
-			var ret = FindMinimalPath<TNode, TPosition>(startingNode, (lookup, best) => comparer.Equals(best.Position, endPosition), getNeighbors);
+			Func<Dictionary<TPosition, RandomMeldablePriorityTree<TNode>>, TNode, bool> isDone;
+			if (token.CanBeCanceled)
+				isDone = (lookup, best) =>
+				{
+					if (token.IsCancellationRequested)
+						return true;
+					return comparer.Equals(best.Position, endPosition);
+				};
+			else
+				isDone = (lookup, best) => comparer.Equals(best.Position, endPosition);
+			
+			var ret = FindMinimalPath(startingNode, isDone, getNeighbors);
 			success = ret.Count > 0 && comparer.Equals(ret.Last().Position, endPosition);
 			return ret;
 		}
@@ -86,9 +108,8 @@ namespace Kts.AStar
 		/// </summary>
 		/// <param name="getNeighbors">Given a position, return all the neighbors directly accessible from that position.</param>
 		public static List<TNode> FindMinimalPath<TNode, TPosition>(
-			TNode startingNode, 
-			Func<Dictionary<TPosition, 
-			RandomMeldablePriorityTree<TNode>>, TNode, bool> isDone, 
+			TNode startingNode,
+			Func<Dictionary<TPosition, RandomMeldablePriorityTree<TNode>>, TNode, bool> isDone,
 			Func<TNode, IEnumerable<TNode>> getNeighbors)
 			where TNode : SearchNodeBase<TPosition>
 		{
@@ -164,7 +185,7 @@ namespace Kts.AStar
 		/// TPosition will be used as a dictionary key.
 		/// </summary>
 		public static List<TPosition> BidirectionalFindMinimalPath<TPosition>(TPosition startingPosition, TPosition endingPosition, Func<TPosition, IEnumerable<TPosition>> getNeighbors,
-			Func<TPosition, TPosition, double> getScoreBetween, Func<TPosition, bool, double> getHeuristicScore, out double distance)
+			Func<TPosition, TPosition, double> getScoreBetween, Func<TPosition, bool, double> getHeuristicScore, out double distance, CancellationToken token = new CancellationToken())
 			where TPosition : class // needed for thread-safe assignment
 		{
 			var dictionary = new ConcurrentDictionary<TPosition, EncapsulatedSearchNode<TPosition>>();
@@ -218,8 +239,7 @@ namespace Kts.AStar
 
 			SearchNodeBase<TPosition> node1 = GetNode(lookup1, dictionary, first);
 			SearchNodeBase<TPosition> node2 = GetNode(lookup2, dictionary, first);
-
-
+			
 			distance = node1.G + node2.G;
 			while (node1 != null)
 			{

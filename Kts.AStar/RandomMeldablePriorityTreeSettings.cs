@@ -1,5 +1,4 @@
 using System;
-using System.IO;
 using System.Threading;
 
 namespace Kts.AStar
@@ -13,8 +12,8 @@ namespace Kts.AStar
 		// the m ore searches were running in parallel
 		// as it stands it adds an extra 2kb to every thread that calls into here (forever)
 
-		private static ThreadLocal<byte[]> _randoms = new ThreadLocal<byte[]>(() => new byte[2048]);
-		private static ThreadLocal<int> _spot = new ThreadLocal<int>(() => 2047);
+		private static readonly ThreadLocal<byte[]> _randoms = new ThreadLocal<byte[]>(() => new byte[2048]);
+		private static readonly ThreadLocal<int> _spot = new ThreadLocal<int>(() => 2047);
 		public static byte NextRandom(int cap)
 		{
 			var ret = _randoms.Value[_spot.Value++];
