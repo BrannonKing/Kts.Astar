@@ -9,9 +9,9 @@
 		<projectUrl>https://github.com/BrannonKing/Kts.AStar</projectUrl>
 		<licenseUrl>https://raw.githubusercontent.com/BrannonKing/Kts.Astar/master/LICENSE</licenseUrl>
 		<requireLicenseAcceptance>false</requireLicenseAcceptance>
-		<description>This is a small library that implements a meldable priority queue and a generalizable A* search algorithm on top of that. The performance is good.</description>
+		<description>This is a small library that implements a meldable priority queue and a generalizable A* search algorithm on top of that. The performance is good. It targets PCL profile 111.</description>
 		<summary>A* and Priority Queue</summary>
-		<releaseNotes>Fixed occasional infinite loop in meld.</releaseNotes>
+		<releaseNotes>Added queue class. Added bidirectional call.</releaseNotes>
 		<copyright>Copyright © 2015 Kingtown Software</copyright>
 		<language>en-US</language>
 		<tags>A* AStar meldable priority queue QuickGraph</tags>

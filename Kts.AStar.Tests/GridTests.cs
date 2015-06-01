@@ -249,7 +249,7 @@ namespace Kts.AStar.Tests
 
 		#region QuickGraph
 
-		[Fact]
+		//[Fact]
 		public void QuickgraphComparision()
 		{
 			Func<Edge<PointInt>, double> getScoreBetween = edge =>

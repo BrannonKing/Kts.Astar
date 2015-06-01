@@ -30,25 +30,34 @@ namespace Kts.AStar
 			return Meld(q1, new RandomMeldablePriorityTree<T>(element));
 		}
 
-		private static void BreakConnectionToParent(RandomMeldablePriorityTree<T> q)
+		private static void BreakConnectionToParent(RandomMeldablePriorityTree<T> node, RandomMeldablePriorityTree<T> replacement = null)
 		{
-			if (q == null) return;
-			if (q.Parent == null) return;
-			for (int i = 0; i < q.Parent._children.Length; i++)
+			if (node == null) return;
+			if (node.Parent == null) return;
+			for (int i = 0; i < node.Parent._children.Length; i++)
 			{
-				if (q.Parent._children[i] == q)
+				if (node.Parent._children[i] == node)
 				{
-					q.Parent._children[i] = null;
+					node.Parent._children[i] = replacement;
 					break;
 				}
 			}
-			q.Parent = null;
+			node.Parent = null;
 		}
 
 		/// <summary>
 		/// Merge two heaps into one.
 		/// </summary>
 		public static RandomMeldablePriorityTree<T> Meld(RandomMeldablePriorityTree<T> q1, RandomMeldablePriorityTree<T> q2)
+		{
+			return Meld(q1, q2, x => RandomMeldablePriorityTreeSettings.NextRandom(q1._children.Length));
+		}
+
+		/// <summary>
+		/// Merge two heaps into one.
+		/// </summary>
+		public static RandomMeldablePriorityTree<T> Meld(RandomMeldablePriorityTree<T> q1, RandomMeldablePriorityTree<T> q2,
+			Func<int, byte> getChildIndex)
 		{
 			// think this through:
 			// we will return either q1 or q2 (and if either is null, return is obvious)
@@ -85,7 +94,7 @@ namespace Kts.AStar
 			do
 			{
 				// pick a random child branch
-				var childIdx = RandomMeldablePriorityTreeSettings.NextRandom(q1._children.Length);
+				var childIdx = getChildIndex.Invoke(q1._children.Length);
 
 				// at this point q2 is larger than or equal to q1
 				if (q1._children[childIdx] == null)
@@ -138,16 +147,19 @@ namespace Kts.AStar
 		/// </summary>
 		public RandomMeldablePriorityTree<T> DeleteMin()
 		{
+			var parent = Parent;
 			var newRoot = Meld(_children[0], _children[1]);
 			for (var i = 2; i < _children.Length; i++)
 				newRoot = Meld(newRoot, _children[i]);
 
-			var parent = Parent;
 			if (parent != null)
 			{
-				// really, this should never happen in standard usage
-				BreakConnectionToParent(this);
-				newRoot.Parent = parent;
+				// really, this should never happen in standard A* usage
+				BreakConnectionToParent(this, newRoot);
+				if (newRoot != null)
+				{
+					newRoot.Parent = parent;
+				}
 			}
 			return newRoot;
 		}

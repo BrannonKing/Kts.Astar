@@ -1,37 +1,51 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Kts.AStar.Tests
 {
 	public class QueueTests
 	{
+		private readonly ITestOutputHelper _output;
+
+		public QueueTests(ITestOutputHelper output)
+		{
+			_output = output;
+		}
+
+
 		[Fact]
 		public void SortsAMillion()
 		{
 			var rand = new Random(42);
 			const int count = 1000000;
-			var randoms = new List<int>(count);
-			for(int i = 0; i < count; i++)
+			var randoms = new HashSet<int>();
+			while(randoms.Count < count)
 				randoms.Add(rand.Next());
 
-			RandomMeldablePriorityTree<int> heap = null;
-			for (int i = 0; i < count; i++)
-				heap = RandomMeldablePriorityTree<int>.Meld(heap, randoms[i]);
+			var queue = new RandomMeldablePriorityQueue<int>();
+			foreach(var r in randoms)
+				queue.Enqueue(r);
+
+			Assert.Equal(count, queue.Count);
+
+			var copy = new int[count];
+			queue.CopyTo(copy, 0);
+
+			Assert.Equal(count, queue.Count);
 
 			var sorted = new List<int>(count);
-			while (heap != null)
-			{
-				sorted.Add(heap.Element);
-				heap = heap.DeleteMin();
-			}
+			for(int i = 0; i < count; i++)
+				sorted.Add(queue.Dequeue());
 
+			Assert.Equal(0, queue.Count);
 
-			randoms.Sort();
-
-			Assert.True(randoms.SequenceEqual(sorted));
+			Assert.True(randoms.OrderBy(x => x).SequenceEqual(sorted));
+			Assert.True(copy.SequenceEqual(sorted));
 		}
 
 		[Fact]
@@ -129,6 +143,59 @@ namespace Kts.AStar.Tests
 				Assert.True(ReferenceEquals(items[i + 10], sorted[i * 2]));
 				Assert.True(ReferenceEquals(items[i], sorted[i * 2 + 1]));
 			}
+		}
+
+		[Fact]
+		public void SomeCanBeRemovedFromQueue()
+		{
+			var rand = new Random(42);
+			const int count = 100000;
+			var randoms = new List<int>(count);
+			while (randoms.Count < count)
+				randoms.Add(rand.Next(1000));
+
+			var distinct = randoms.Distinct().ToList();
+			var duplicateCount = count - distinct.Count;
+			Assert.True(duplicateCount > 0);
+
+			var queue = new RandomMeldablePriorityQueue<int>();
+			foreach (var r in randoms)
+				queue.Enqueue(r);
+
+			Assert.Equal(distinct.Count, queue.Count);
+
+			const int toBeRemoved = 10;
+			for (int i = 0; i < toBeRemoved; i++)
+			{
+				var item = distinct.Last();
+				distinct.RemoveAt(distinct.Count - 1);
+				Assert.True(queue.Remove(item));
+			}
+
+			var sorted = new List<int>(distinct.Count);
+			for (int i = 0; i < distinct.Count; i++)
+				sorted.Add(queue.Dequeue());
+
+			Assert.Equal(0, queue.Count);
+
+			Assert.True(distinct.OrderBy(x => x).SequenceEqual(sorted));
+		}
+
+		[Fact]
+		public void RandomSpeedTest()
+		{
+			var rand = new Random(42);
+			var buffer = new byte[204800];
+			var sw = Stopwatch.StartNew();
+			for (int i = 0; i < 200; i++)
+				rand.NextBytes(buffer);
+			_output.WriteLine("Random in {0}ms", sw.Elapsed.TotalMilliseconds);
+
+			sw.Restart();
+			for (int i = 0; i < 200; i++)
+				RandomMeldablePriorityTreeSettings.FillBufferWithXorShift(buffer);
+
+			_output.WriteLine("XorShift in {0}ms", sw.Elapsed.TotalMilliseconds);
 		}
 	}
 }
