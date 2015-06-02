@@ -5,6 +5,7 @@ using System.Linq;
 using QuickGraph;
 using Xunit;
 using Xunit.Abstractions;
+using System.Threading.Tasks;
 
 namespace Kts.AStar.Tests
 {
@@ -84,6 +85,46 @@ namespace Kts.AStar.Tests
 			_output.WriteLine("Distance: {0}", distance);
 
 			Assert.True(success);
+			Assert.Equal(start, results.First());
+			Assert.Equal(destination, results.Last());
+		}
+
+		[Fact]
+		public async Task ReadmeExampleTask()
+		{
+			Func<PointInt, IEnumerable<PointInt>> getNeighbors = p => new[]
+			{
+				new PointInt(p.X - 1, p.Y + 0), // L
+				new PointInt(p.X + 1, p.Y + 0), // R
+				new PointInt(p.X + 0, p.Y - 1), // B
+				new PointInt(p.X + 0, p.Y + 1), // T
+			};
+
+			Func<PointInt, PointInt, double> getScoreBetween = (p1, p2) =>
+			{
+				// Manhatten Distance
+				return Math.Abs(p1.X - p2.X) + Math.Abs(p1.Y - p2.Y);
+			};
+
+			var rand = new Random(42);
+
+			var start = new PointInt(rand.Next(1000), rand.Next(1000));
+			var destination = new PointInt(rand.Next(1000), rand.Next(1000));
+
+			Func<PointInt, double> getHeuristicScore = p =>
+			{
+				return Math.Abs(p.X - destination.X) + Math.Abs(p.Y - destination.Y);
+			};
+
+			_output.WriteLine("Going from {0} to {1}", start, destination);
+
+			var sw = Stopwatch.StartNew();
+			var task = AStarUtilities.FindMinimalPath(start, destination, getNeighbors, getScoreBetween, getHeuristicScore);
+			var results = await task;
+			_output.WriteLine("Done in {0}s.", sw.Elapsed.TotalSeconds);
+			_output.WriteLine("Expansions: {0}", AStarUtilities.LastExpansionCount);
+			_output.WriteLine("Result Count: {0}", results.Count);
+
 			Assert.Equal(start, results.First());
 			Assert.Equal(destination, results.Last());
 		}
