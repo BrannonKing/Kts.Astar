@@ -8,12 +8,29 @@ namespace Kts.AStar
 	/// </summary>
 	public sealed class RandomMeldablePriorityTree<T> where T : IComparable<T>
 	{
+		private static int _childrenCount = 4;
+
+		/// <summary>
+		/// Number of children allocated for each node.
+		/// </summary>
+		public static int ChildrenCount
+		{
+			get { return _childrenCount; }
+			set
+			{
+				if (value < 2 || value >= 256)
+					throw new ArgumentOutOfRangeException("value", value, "The value must be creater than 1 and less than 256.");
+				_childrenCount = value;
+			}
+		}
+
+
 		private readonly RandomMeldablePriorityTree<T>[] _children;
 
 		public RandomMeldablePriorityTree(T firstElement)
 		{
 			Element = firstElement;
-			_children = new RandomMeldablePriorityTree<T>[RandomMeldablePriorityTreeSettings.ChildrenCount];
+			_children = new RandomMeldablePriorityTree<T>[ChildrenCount];
 		}
 
 		public T Element { get; private set; }
@@ -50,7 +67,7 @@ namespace Kts.AStar
 		/// </summary>
 		public static RandomMeldablePriorityTree<T> Meld(RandomMeldablePriorityTree<T> q1, RandomMeldablePriorityTree<T> q2)
 		{
-			return Meld(q1, q2, x => RandomMeldablePriorityTreeSettings.NextRandom(q1._children.Length));
+			return Meld(q1, q2, x => ThreadLocalXorShifter.NextRandom(q1._children.Length));
 		}
 
 		/// <summary>

@@ -159,7 +159,7 @@ namespace Kts.AStar.Tests
 				var destination = new PointInt(rand.Next(1000), rand.Next(1000));
 				for (int i = 0; i < 4; i++)
 				{
-					RandomMeldablePriorityTreeSettings.ChildrenCount = i + 2;
+					RandomMeldablePriorityTree<AStarUtilities.EncapsulatedSearchNode<PointInt>>.ChildrenCount = i + 2;
 					_output.WriteLine("Starting run with {0} children.", i + 2);
 
 					Func<PointInt, double> getHeuristicScore = p =>
@@ -185,6 +185,7 @@ namespace Kts.AStar.Tests
 					Assert.Equal(destination, results.Last());
 				}
 			}
+			RandomMeldablePriorityTree<AStarUtilities.EncapsulatedSearchNode<PointInt>>.ChildrenCount = 4;
 		}
 
 		[Fact]
@@ -219,19 +220,19 @@ namespace Kts.AStar.Tests
 			_output.WriteLine("Going from {0} to {1}", start, destination);
 
 			var sw = Stopwatch.StartNew();
-			double distance, distanceControl;
-			var results = AStarUtilities.BidirectionalFindMinimalPath(start, destination, getNeighbors, getScoreBetween, getHeuristicScore, out distance);
+			double distance, distanceControl; bool success;
+			var results = AStarUtilities.BidirectionalFindMinimalPath(start, destination, getNeighbors, getScoreBetween, getHeuristicScore, out distance, out success);
 
 			_output.WriteLine("Done in {0}s.", sw.Elapsed.TotalSeconds);
 			_output.WriteLine("Expansions: {0}", AStarUtilities.LastExpansionCount);
 			_output.WriteLine("Result Count: {0}", results.Count);
 			_output.WriteLine("Distance: {0}", distance);
 
+			Assert.True(success);
 			Assert.Equal(start, results.First());
 			Assert.Equal(destination, results.Last());
 
 			sw.Restart();
-			bool success;
 			var resultsControl = AStarUtilities.FindMinimalPath(start, destination, getNeighbors, getScoreBetween, p => getHeuristicScore(p, false), out distanceControl, out success);
 
 			_output.WriteLine("Control Done in {0}s.", sw.Elapsed.TotalSeconds);
@@ -243,6 +244,53 @@ namespace Kts.AStar.Tests
 			Assert.Equal(start, resultsControl.First());
 			Assert.Equal(destination, resultsControl.Last());
 			Assert.Equal(distanceControl, distance);
+		}
+
+		[Fact]
+		public void VerifyNoExpansionsDoesntCrash()
+		{
+			Func<PointInt, IEnumerable<PointInt>> getNeighbors = p => new PointInt[0];
+
+			Func<PointInt, PointInt, double> getScoreBetween = (p1, p2) =>
+			{
+				// Manhatten Distance
+				return 1;
+			};
+
+			var rand = new Random(42);
+
+			var start = new PointInt(0, 0);
+			var destination = new PointInt(400, 400);
+
+			Func<PointInt, bool, double> getHeuristicScore = (p, backward) =>
+			{
+				var dx = backward ? (p.X - start.X) : (p.X - destination.X);
+				var dy = backward ? (p.Y - start.Y) : (p.Y - destination.Y);
+				return Math.Sqrt(dx * dx + dy * dy);
+			};
+
+			_output.WriteLine("Going from {0} to {1}", start, destination);
+
+			var sw = Stopwatch.StartNew();
+			double distance, distanceControl; bool success;
+			var results = AStarUtilities.BidirectionalFindMinimalPath(start, destination, getNeighbors, getScoreBetween, getHeuristicScore, out distance, out success);
+
+			_output.WriteLine("Done in {0}s.", sw.Elapsed.TotalSeconds);
+			_output.WriteLine("Expansions: {0}", AStarUtilities.LastExpansionCount);
+			_output.WriteLine("Result Count: {0}", results.Count);
+			_output.WriteLine("Distance: {0}", distance);
+
+			Assert.False(success);
+
+			sw.Restart();
+			var resultsControl = AStarUtilities.FindMinimalPath(start, destination, getNeighbors, getScoreBetween, p => getHeuristicScore(p, false), out distanceControl, out success);
+
+			_output.WriteLine("Control Done in {0}s.", sw.Elapsed.TotalSeconds);
+			_output.WriteLine("Expansions: {0}", AStarUtilities.LastExpansionCount);
+			_output.WriteLine("Result Count: {0}", resultsControl.Count);
+			_output.WriteLine("Distance: {0}", distanceControl);
+
+			Assert.False(success);
 		}
 
 		// MAIN TODO:

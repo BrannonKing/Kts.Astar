@@ -1,11 +1,13 @@
 Kts.Astar
 =========
 
-This library contains an A* search implementation built upon a Random Meldable Priority Queue. Some time ago I was involved in some signal analysis that needed a mechanism for finding the optimal path between beats (high amplitude points). This is a side product of that project. 
+This library contains an A* search implementation built upon a Random Meldable Priority Queue. Some time ago I was involved in some signal analysis that needed a mechanism for finding the optimal path between beats (high amplitude points). This is a side product of that project.
 
 I had attempted to use [QuickGraph](http://quickgraph.codeplex.com). I like the QuickGraph library. It is a general-purpose library, unlike this one. It's well designed and quite useful. However, it was not fast enough for my needs. Also, it appears to require all graph nodes to be loaded in memory ahead of time. This project keeps explored nodes in memory, but they do not need to be preloaded.
 
 You will notice in the unit tests a failed attempt at getting a true comparison against QuickGraph. It crashes after some time. I'm open to help on finishing this comparison, and I'm very open to contributions in general.
+
+The project supports the portable class library: .NET 4.5, Windows 8, and Windows Phone 8.1.
 
 Instructions
 ------------
@@ -120,3 +122,7 @@ Example:
 		}
 
 ```
+
+I've recently added a bidirectional method: `AStarUtilities.BidirectionalFindMinimalPath`. Use it the same as the other overloads. It starts two threads each searching from opposite ends. It runs faster on my not-so-real-world test, but your mileage may vary. It does use a lot of memory. Indeed, this library is fairly aggressive on memory allocation in general. It relies on the fast allocation available in languages like C#.
+
+If you just want a priority queue collection, use the `RandomMeldablePriorityQueue` class. Use its `Enqueue` and `Dequeue` methds to push and pop. It also hast fast arbitrary removal with the `Remove` method, which is different from many implementations.

@@ -193,7 +193,7 @@ namespace Kts.AStar.Tests
 
 			sw.Restart();
 			for (int i = 0; i < 200; i++)
-				RandomMeldablePriorityTreeSettings.FillBufferWithXorShift(buffer);
+				ThreadLocalXorShifter.FillBufferWithXorShift(buffer);
 
 			_output.WriteLine("XorShift in {0}ms", sw.Elapsed.TotalMilliseconds);
 		}

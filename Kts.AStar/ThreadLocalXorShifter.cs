@@ -3,10 +3,8 @@ using System.Threading;
 
 namespace Kts.AStar
 {
-	public static class RandomMeldablePriorityTreeSettings
+	public static class ThreadLocalXorShifter
 	{
-		private static int _childrenCount = 4;
-
 		// not sure that I really want to use thread-local storage
 		// the only other option, though, is a lock and that would degrade
 		// the m ore searches were running in parallel
@@ -24,21 +22,6 @@ namespace Kts.AStar
 			}
 			return (byte)(ret % cap);
 		}
-
-		/// <summary>
-		/// Number of children allocated for each node.
-		/// </summary>
-		public static int ChildrenCount
-		{
-			get { return _childrenCount; }
-			set
-			{
-				if (value < 2 || value >= 256)
-					throw new ArgumentOutOfRangeException("value", value, "The value must be creater than 1 and less than 256.");
-				_childrenCount = value;
-			}
-		}
-
 
 		private static uint _x = 123456789;
 		private static uint _y = 362436069;

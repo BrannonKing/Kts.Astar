@@ -13,7 +13,7 @@ namespace Kts.AStar
 	{
 		// would we allow people to override this class and fill in methods to generate the node data?
 
-		private class EncapsulatedSearchNode<T> : SearchNodeBase<T>
+		internal class EncapsulatedSearchNode<T> : SearchNodeBase<T>
 		{
 			private readonly double _h;
 			public EncapsulatedSearchNode(
@@ -31,6 +31,28 @@ namespace Kts.AStar
 			{
 				get { return _h; }
 			}
+		}
+
+			/// <summary>
+		/// Returns the best path. Async method call.
+		/// TPosition will be used as a dictionary key.
+		/// </summary>
+		/// <param name="startingPosition"></param>
+		/// <param name="endingPosition"></param>
+		/// <param name="getNeighbors">Given a position, return all the neighbors directly accessible from that position.</param>
+		/// <param name="getScoreBetween">Given two (adjacent) positions/nodes, return the score/distance between them.</param>
+		/// <param name="getHeuristicScore">Given a position/node, return the (admissibly) estimated distance/score for that point to the endingPosition.</param>
+		public static async Task<List<TPosition>> FindMinimalPath<TPosition>(
+			TPosition startingPosition,
+			TPosition endingPosition,
+			Func<TPosition, IEnumerable<TPosition>> getNeighbors,
+			Func<TPosition, TPosition, double> getScoreBetween,
+			Func<TPosition, double> getHeuristicScore,
+			CancellationToken token = new CancellationToken())
+		{
+			double distance; bool success;
+			return await Task.Run(() => FindMinimalPath(startingPosition, endingPosition, 
+				getNeighbors, getScoreBetween, getHeuristicScore, out distance, out success, token), token);
 		}
 
 		/// <summary>
@@ -185,7 +207,7 @@ namespace Kts.AStar
 		/// TPosition will be used as a dictionary key.
 		/// </summary>
 		public static List<TPosition> BidirectionalFindMinimalPath<TPosition>(TPosition startingPosition, TPosition endingPosition, Func<TPosition, IEnumerable<TPosition>> getNeighbors,
-			Func<TPosition, TPosition, double> getScoreBetween, Func<TPosition, bool, double> getHeuristicScore, out double distance, CancellationToken token = new CancellationToken())
+			Func<TPosition, TPosition, double> getScoreBetween, Func<TPosition, bool, double> getHeuristicScore, out double distance, out bool success, CancellationToken token = new CancellationToken())
 			where TPosition : class // needed for thread-safe assignment
 		{
 			var dictionary = new ConcurrentDictionary<TPosition, EncapsulatedSearchNode<TPosition>>();
@@ -193,7 +215,7 @@ namespace Kts.AStar
 			Func<Dictionary<TPosition, RandomMeldablePriorityTree<EncapsulatedSearchNode<TPosition>>>, EncapsulatedSearchNode<TPosition>, bool> thread1Done =
 				(lookup, best) =>
 				{
-					if (!dictionary.TryAdd(best.Position, best))
+					if (!dictionary.TryAdd(best.Position, best) || token.IsCancellationRequested)
 					{
 						lookup1 = lookup;
 						return true;
@@ -203,7 +225,7 @@ namespace Kts.AStar
 			Func<Dictionary<TPosition, RandomMeldablePriorityTree<EncapsulatedSearchNode<TPosition>>>, EncapsulatedSearchNode<TPosition>, bool> thread2Done =
 				(lookup, best) =>
 				{
-					if (!dictionary.TryAdd(best.Position, best))
+					if (!dictionary.TryAdd(best.Position, best) || token.IsCancellationRequested)
 					{
 						lookup2 = lookup;
 						return true;
@@ -223,17 +245,24 @@ namespace Kts.AStar
 			var path1 = task1.Result;
 			var path2 = task2.Result;
 
+			var ret = new List<TPosition>();
+			if (lookup1 == null || lookup2 == null)
+			{
+				distance = double.PositiveInfinity;
+				success = false;
+				return ret;
+			}
+
 			LastExpansionCount = lookup1.Count + lookup2.Count;
 
 			var overlap = lookup1.Keys.Intersect(lookup2.Keys);
 			var kvps = overlap.ToDictionary(o => o, o => GetG(lookup1, dictionary, o) + GetG(lookup2, dictionary, o));
 
-			var ret = new List<TPosition>();
-
 			var first = kvps.OrderBy(kvp => kvp.Value).Select(kvp => kvp.Key).FirstOrDefault();
 			if (first == null)
 			{
 				distance = double.PositiveInfinity;
+				success = false;
 				return ret;
 			}
 
@@ -254,6 +283,8 @@ namespace Kts.AStar
 				node2 = node2.Parent;
 			}
 
+			var comparer = EqualityComparer<TPosition>.Default;
+			success = comparer.Equals(ret.First(), startingPosition) && comparer.Equals(ret.Last(), endingPosition);
 			return ret;
 		}
 
